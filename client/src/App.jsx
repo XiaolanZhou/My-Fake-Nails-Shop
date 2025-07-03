@@ -1,17 +1,17 @@
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import React from 'react';
 import ProductList from './components/ProductList';
-// Add more as you build them
 import CartPage from './components/CartPage';
+import Navbar from './Navbar';
+import { Routes, Route } from 'react-router-dom';
 
-function App() {
-  return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<ProductList />} />
-        <Route path="/cart" element={<CartPage />} />
-      </Routes>
-    </Router>
-  );
-}
+const App = () => (
+  <>
+    <Navbar />
+    <Routes>
+      <Route path="/" element={<ProductList />} />
+      <Route path="/cart" element={<CartPage />} />
+    </Routes>
+  </>
+);
 
 export default App;

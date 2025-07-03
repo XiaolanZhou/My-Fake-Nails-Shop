@@ -18,6 +18,14 @@ CREATE TABLE IF NOT EXISTS cart_items (
     FOREIGN KEY (product_id) REFERENCES products(id)
 );
 
+CREATE TABLE IF NOT EXISTS orders (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    product_id INT,
+    quantity INT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (product_id) REFERENCES products(id)
+);
+
 -- Insert sample products
 INSERT IGNORE INTO products (name, description, price, image_url) VALUES
 ('Rose Quartz Set', 'Elegant pink marble design with glossy finish.', 19.99, 'https://example.com/images/rose-quartz.jpg'),
