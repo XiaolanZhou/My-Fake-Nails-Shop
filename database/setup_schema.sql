@@ -1,6 +1,10 @@
 CREATE DATABASE IF NOT EXISTS my1stwebsite;
 USE my1stwebsite;
 
+-- DROP TABLE IF EXISTS cart_items;
+-- DROP TABLE IF EXISTS orders;
+-- DROP TABLE IF EXISTS products;
+
 -- Create the products table
 CREATE TABLE IF NOT EXISTS products (
     id INT AUTO_INCREMENT PRIMARY KEY,

@@ -1,17 +1,21 @@
 import React from 'react';
-import ProductList from './components/ProductList';
-import CartPage from './components/CartPage';
-import Navbar from './Navbar';
 import { Routes, Route } from 'react-router-dom';
+import Navbar from './layout/Navbar';
+import Footer from './layout/Footer';
+import Home from './pages/Home';
+import Cart from './pages/Cart';
 
 const App = () => (
-  <>
+  <div className="flex flex-col min-h-screen">
     <Navbar />
-    <Routes>
-      <Route path="/" element={<ProductList />} />
-      <Route path="/cart" element={<CartPage />} />
-    </Routes>
-  </>
+    <main className="flex-grow">
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/cart" element={<Cart />} />
+      </Routes>
+    </main>
+    <Footer />
+  </div>
 );
 
 export default App;

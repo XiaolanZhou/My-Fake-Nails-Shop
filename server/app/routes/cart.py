@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from db import db, cursor
+from app.db import db, cursor
 
 cart_bp = Blueprint("cart", __name__)
 
@@ -12,7 +12,6 @@ def get_cart():
 
 @cart_bp.route('/add', methods=['POST'])
 def add_to_cart():
-    # logic to add item to cart
     data = request.get_json()
     name = data['name']
     price = data['price']
