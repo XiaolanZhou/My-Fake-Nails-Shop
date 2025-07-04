@@ -7,7 +7,10 @@ const ProductList = () => {
   useEffect(() => {
     fetch('http://localhost:5000/api/products')
       .then(res => res.json())
-      .then(data => setProducts(data))
+      .then(data => {
+        console.log('fetched products:', data);
+        setProducts(data)
+      })
       .catch(err => console.error('Error fetching products:', err));
   }, []);
 

@@ -63,7 +63,6 @@ def decrease_quantity(item_id):
 
 @cart_bp.route('/checkout', methods=['POST'])
 def checkout():
-    # Fetch current cart
     cursor.execute("SELECT * FROM cart_items")
     items = cursor.fetchall()
 
