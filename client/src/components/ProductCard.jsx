@@ -9,7 +9,7 @@ const ProductCard = ({ product, onAddToCart }) => (
     />
     <h2 className="text-lg font-bold">{product.name}</h2>
     <p className="text-sm text-gray-600">{product.description}</p>
-    <p className="font-semibold text-pink-500">${product.price.toFixed(2)}</p>
+    <p className="font-semibold text-pink-500">${Number(product.price).toFixed(2)}</p>
     <button
       className="mt-2 bg-pink-600 text-white px-3 py-1 rounded hover:bg-pink-700"
       onClick={() => onAddToCart(product)}
