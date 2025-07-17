@@ -1,2 +1,12 @@
-/* client/src/index.css */
-/* Global styles go here */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;     /* Firefox */
+}
