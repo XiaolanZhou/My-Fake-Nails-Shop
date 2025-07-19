@@ -1,5 +1,7 @@
 from flask import Blueprint, request, jsonify
 from app.db import get_db_connection
+from flask_jwt_extended import jwt_required, get_jwt_identity, verify_jwt_in_request
+from typing import Any, Dict, List, cast
 
 cart_bp = Blueprint("cart", __name__)
 
@@ -93,27 +95,57 @@ def decrease_quantity(item_id):
     db.close()
     return jsonify({"message": "Quantity decreased"}), 200
 
-
-@cart_bp.route('/checkout', methods=['POST'])
+@cart_bp.route("/checkout", methods=["POST"])
 def checkout():
+    # Try to pick up a token if one is present; don't error if it's missing
+    verify_jwt_in_request(optional=True)
+    user_id = get_jwt_identity()  # None if no (or invalid) token
+
     db = get_db_connection()
-    cursor = db.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM cart_items")
-    items = cursor.fetchall()
+    cur = db.cursor(dictionary=True)
+    cur.execute("""
+        SELECT ci.*, p.price
+        FROM cart_items ci
+        JOIN products p ON p.id = ci.product_id
+    """)
+    # Cast to a list of dicts for static type checking
+    items = cast(List[Dict[str, Any]], cur.fetchall())
 
     if not items:
-        return jsonify({"message": "Cart is already empty!"}), 400
+        cur.close(); db.close()
+        return jsonify(message="Cart is empty"), 400
 
+    # Insert each cart_item into orders; if user_id is None, you
+    # can insert a NULL or 0 in the user_id column (or skip that field entirely)
     for item in items:
-        cursor.execute(
-            "INSERT INTO orders (product_id, quantity) VALUES (%s, %s)",
-            (int(item['product_id']), int(item['quantity']))
+        cur.execute(
+            """
+            INSERT INTO orders (user_id, product_id, quantity)
+            VALUES (%s, %s, %s)
+            """,
+            (user_id, int(item["product_id"]), int(item["quantity"]))
         )
 
-    cursor.execute("DELETE FROM cart_items")
-    db.commit()
-    cursor.close()
-    db.close()
+    # clear the cart
+    cur.execute("DELETE FROM cart_items")
+    # If logged in, add points: $1 = 10 pts
+    if user_id:
+        # Calculate total spent in this checkout
+        total_spent = sum(float(item["price"]) * int(item["quantity"]) for item in items)
+        points_to_add = int(total_spent * 10)
+        cur.execute(
+            "UPDATE users SET points = points + %s WHERE id = %s",
+            (points_to_add, user_id)
+        )
 
-    return jsonify({"message": "Checkout successful!"}), 200
+    db.commit()
+    cur.close(); db.close()
+
+    if user_id:
+        msg = "Thanks for checking out! Our loyal customers get 10% off their next order."
+    else:
+        msg = "Thanks for checking out! Please login to get 10% off your next order."
+
+    return jsonify(message=msg), 200
+
 

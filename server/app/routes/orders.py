@@ -3,15 +3,18 @@ from app.db import get_db_connection
 from collections import defaultdict
 from datetime import datetime
 from typing import cast, List, Dict, Any
+from flask_jwt_extended import jwt_required, get_jwt_identity
 
 
 orders_bp = Blueprint('orders', __name__)
 
 
 @orders_bp.route('/', methods=['GET'])
+@jwt_required()
 def get_orders():
     db = get_db_connection()
     cursor = db.cursor(dictionary=True)
+    user_id = get_jwt_identity()
     cursor.execute("""
       SELECT
         o.id           AS order_item_id,
@@ -25,8 +28,9 @@ def get_orders():
         o.quantity     AS quantity
       FROM orders o
       JOIN products p ON p.id = o.product_id
+      WHERE o.user_id = %s
       ORDER BY o.created_at DESC
-    """)
+    """, (user_id,))
     rows = cast(List[Dict[str, Any]], cursor.fetchall())    
     cursor.close()
     db.close()
@@ -64,9 +68,11 @@ def get_orders():
 
 
 @orders_bp.route('/<order_id>', methods=['GET'])
+@jwt_required()
 def get_order(order_id):
     db = get_db_connection()
     cursor = db.cursor(dictionary=True)
+    user_id = get_jwt_identity()
     cursor.execute("""
       SELECT
         o.id           AS order_item_id,
@@ -81,7 +87,8 @@ def get_order(order_id):
       FROM orders o
       JOIN products p ON p.id = o.product_id
       WHERE DATE_FORMAT(o.created_at, '%%Y%%m%%d%%H%%i%%s') = %s
-    """, (order_id,))
+        AND o.user_id = %s
+    """, (order_id, user_id))
     rows = cast(List[Dict[str, Any]], cursor.fetchall())    
     cursor.close()
     db.close()

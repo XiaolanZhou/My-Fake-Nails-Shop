@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext.jsx';
 
 const CartPage = () => {
     const [cartItems, setCartItems] = useState([]);
+    const { token } = useAuth();
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -26,7 +28,6 @@ const CartPage = () => {
         fetch(`http://localhost:5001/api/cart/${route}/${cartItemId}`, { method: 'PATCH' })
             .then(res => {
                 if (res.ok) return res.json();
-                // if we tried to decrease below 1, fall back to remove
                 if (!res.ok && type === 'decrease') {
                     return fetch(`http://localhost:5001/api/cart/remove/${cartItemId}`, {
                         method: 'DELETE',
@@ -66,7 +67,10 @@ const CartPage = () => {
     );
 
     const handleCheckout = () => {
-        fetch('http://localhost:5001/api/cart/checkout', { method: 'POST' })
+        fetch('http://localhost:5001/api/cart/checkout', { 
+            method: 'POST',
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+        })
             .then(res => res.json())
             .then(({ message }) => {
                 alert(message);

@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from 'react'
+import { useAuth } from '../context/AuthContext.jsx'
+import { useNavigate } from 'react-router-dom'
 
 const TABS = ['All Orders', 'Unpaid', 'Processing', 'Shipped', 'Review']
 
@@ -8,10 +10,18 @@ function classNames(...classes) {
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState([])
+  const { isAuthenticated, token } = useAuth()
+  const navigate = useNavigate()
   const [selectedTab, setSelectedTab] = useState(TABS[0])
 
   useEffect(() => {
-    fetch('http://localhost:5001/api/orders')
+    if (!isAuthenticated) {
+      navigate('/login')
+      return
+    }
+    fetch('http://localhost:5001/api/orders', {
+      headers: { Authorization: `Bearer ${token}` },
+    })
       .then((res) => res.json())
       .then((data) => setOrders(data))
       .catch((err) => console.error('Error fetching orders:', err))

@@ -26,12 +26,24 @@ CREATE TABLE IF NOT EXISTS cart_items (
 
 CREATE TABLE IF NOT EXISTS orders (
     id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NULL,
     product_id INT,
     quantity INT,
     status ENUM('unpaid', 'processing', 'shipped', 'review') NOT NULL DEFAULT 'unpaid',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (product_id) REFERENCES products(id)
+    FOREIGN KEY (product_id) REFERENCES products(id),
+    FOREIGN KEY (user_id) REFERENCES users(id)
 );
+
+CREATE TABLE IF NOT EXISTS users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    email   VARCHAR(255) UNIQUE NOT NULL,
+    phone   VARCHAR(32) NULL,
+    username VARCHAR(80) UNIQUE NOT NULL,
+    password_hash VARCHAR(128) NOT NULL,
+    points INT NOT NULL DEFAULT 0
+);
+
 
 -- Insert sample products
 INSERT IGNORE INTO products (name, description, price, image_url) VALUES
