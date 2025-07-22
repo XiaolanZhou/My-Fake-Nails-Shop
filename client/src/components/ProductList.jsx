@@ -3,9 +3,11 @@ import React, { useEffect, useState } from 'react'
 import { ToastContainer, toast } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 import ProductCard from './ProductCard'
+import { useAuth } from '../context/AuthContext.jsx'
 
 export default function ProductList() {
   const [products, setProducts] = useState([])
+  const { token } = useAuth()
 
   useEffect(() => {
     fetch('http://localhost:5001/api/products')
@@ -17,7 +19,10 @@ export default function ProductList() {
   const handleAdd = product => {
     fetch('http://localhost:5001/api/cart/add', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
       body: JSON.stringify(product),
     })
       .then(r => r.json())

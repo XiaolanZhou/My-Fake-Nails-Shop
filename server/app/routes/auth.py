@@ -79,6 +79,10 @@ def login():
               identity=str(user["id"]),
               additional_claims={"username": user["username"]}
             )
+
+    # Attach any guest cart items (user_id IS NULL) to this user
+    cursor.execute("UPDATE cart_items SET user_id = %s WHERE user_id IS NULL", (user["id"],))
+    db.commit()
     # return in both body and header for convenience
     resp = jsonify({"access_token": token})
     resp.headers["Authorization"] = f"Bearer {token}"

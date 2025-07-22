@@ -5,18 +5,24 @@ import { useAuth } from '../context/AuthContext.jsx';
 
 const CartPage = () => {
     const [cartItems, setCartItems] = useState([]);
-    const { token } = useAuth();
+    const { token, user } = useAuth();
+    const [applyPoints, setApplyPoints] = useState(false);
     const navigate = useNavigate();
 
     useEffect(() => {
-        fetch('http://localhost:5001/api/cart/')
+        fetch('http://localhost:5001/api/cart/', {
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+        })
             .then(res => res.json())
             .then(data => setCartItems(data))
             .catch(err => console.error('Error fetching cart:', err));
-    }, []);
+    }, [token]);
 
     const handleRemove = (cartItemId) => {
-        fetch(`http://localhost:5001/api/cart/remove/${cartItemId}`, { method: 'DELETE' })
+        fetch(`http://localhost:5001/api/cart/remove/${cartItemId}`, {
+            method: 'DELETE',
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+        })
             .then(() =>
                 setCartItems(items => items.filter(item => item.cart_item_id !== cartItemId))
             )
@@ -25,12 +31,16 @@ const CartPage = () => {
 
     const updateQuantity = (cartItemId, type) => {
         const route = type === 'increase' ? 'increase' : 'decrease';
-        fetch(`http://localhost:5001/api/cart/${route}/${cartItemId}`, { method: 'PATCH' })
+        fetch(`http://localhost:5001/api/cart/${route}/${cartItemId}`, {
+            method: 'PATCH',
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+        })
             .then(res => {
                 if (res.ok) return res.json();
                 if (!res.ok && type === 'decrease') {
                     return fetch(`http://localhost:5001/api/cart/remove/${cartItemId}`, {
                         method: 'DELETE',
+                        headers: token ? { Authorization: `Bearer ${token}` } : {},
                     }).then(() => ({ removed: true }));
                 }
                 throw new Error('Quantity update failed');
@@ -66,19 +76,27 @@ const CartPage = () => {
         0
     );
 
+    const pointsAvailable = user?.points ?? 0;        // 10 pts per $1 earned
+    const pointsDollarValue = (pointsAvailable / 100); // $1 off per 100 pts
+    const discount = applyPoints ? Math.min(pointsDollarValue, total) : 0;
+    const grandTotal = (total - discount).toFixed(2);
+
     const handleCheckout = () => {
-        fetch('http://localhost:5001/api/cart/checkout', { 
+        fetch('http://localhost:5001/api/payments/create-checkout-session', {
             method: 'POST',
-            headers: token ? { Authorization: `Bearer ${token}` } : {},
+            headers: {
+                'Content-Type': 'application/json',
+                ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
+            body: JSON.stringify({ applyPoints }),
         })
             .then(res => res.json())
-            .then(({ message }) => {
-                alert(message);
-                setCartItems([]);
-                navigate('/orders');
+            .then(({ url }) => {
+                if (!url) throw new Error('Unable to initiate payment')
+                window.location.href = url // Redirect browser to Stripe Checkout
             })
-            .catch(err => console.error('Checkout failed:', err));
-    };
+            .catch(err => console.error('Checkout failed:', err))
+    }
 
     return (
         <div className="p-4">
@@ -123,8 +141,32 @@ const CartPage = () => {
             )}
             {cartItems.length > 0 && (
                 <>
-                    <div className="mt-4 font-bold text-lg">
-                        Total: ${total.toFixed(2)}
+                    {token && (
+                        <div className="mt-2">
+                            <label className="inline-flex items-center gap-2">
+                                <input
+                                  type="checkbox"
+                                  className="form-checkbox"
+                                  checked={applyPoints}
+                                  onChange={e => setApplyPoints(e.target.checked)}
+                                />
+                                Apply my points
+                            </label>
+                        </div>
+                    )}
+                    <div className="mt-4">
+                      {applyPoints && discount > 0 ? (
+                        <>
+                          <span className="text-gray-500 line-through mr-2 text-lg">
+                            ${total.toFixed(2)}
+                          </span>
+                          <span className="text-4xl font-bold text-red-600">
+                            ${grandTotal}
+                          </span>
+                        </>
+                      ) : (
+                        <span className="text-lg font-bold">${total.toFixed(2)}</span>
+                      )}
                     </div>
                     <button
                         onClick={handleCheckout}

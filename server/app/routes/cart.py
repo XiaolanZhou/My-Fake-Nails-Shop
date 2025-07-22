@@ -7,54 +7,70 @@ cart_bp = Blueprint("cart", __name__)
 
 @cart_bp.route('/', methods=['GET'])
 def get_cart():
+  verify_jwt_in_request(optional=True)
+  user_id = get_jwt_identity()
+
   db = get_db_connection()
   cursor = db.cursor(dictionary=True)
-  cursor.execute("""
-    SELECT
-      ci.id           AS cart_item_id,
-      p.id            AS product_id,
-      p.name,
-      p.description,
-      p.price,
-      p.image_url,
-      ci.quantity
-    FROM cart_items ci
-    JOIN products     p  ON p.id = ci.product_id
-  """)
+  if user_id is None:
+      cursor.execute("""
+        SELECT ci.id AS cart_item_id, p.id AS product_id, p.name, p.description, p.price, p.image_url, ci.quantity
+        FROM cart_items ci JOIN products p ON p.id = ci.product_id
+        WHERE ci.user_id IS NULL
+      """)
+  else:
+      cursor.execute("""
+        SELECT ci.id AS cart_item_id, p.id AS product_id, p.name, p.description, p.price, p.image_url, ci.quantity
+        FROM cart_items ci JOIN products p ON p.id = ci.product_id
+        WHERE ci.user_id = %s
+      """, (user_id,))
   items = cursor.fetchall()
-  cursor.close()
-  db.close()
+  cursor.close(); db.close()
   return jsonify(items), 200
 
 
 @cart_bp.route('/add', methods=['POST'])
 def add_to_cart():
+    verify_jwt_in_request(optional=True)
+    user_id = get_jwt_identity()
+
     data       = request.get_json()
     product_id = data['id']           # the product’s ID
     quantity   = data.get('quantity', 1)
 
     db = get_db_connection()
     cursor = db.cursor(dictionary=True)
-    cursor.execute(
-      "SELECT quantity FROM cart_items WHERE product_id = %s",
-      (product_id,)
-    )
-    existing = cursor.fetchone()
 
-    if existing:
+    if user_id is None:
         cursor.execute(
-          "UPDATE cart_items SET quantity = quantity + %s WHERE product_id = %s",
-          (quantity, product_id)
+          "SELECT quantity FROM cart_items WHERE product_id = %s AND user_id IS NULL",
+          (product_id,)
         )
     else:
         cursor.execute(
-          "INSERT INTO cart_items (product_id, quantity) VALUES (%s, %s)",
-          (product_id, quantity)
+          "SELECT quantity FROM cart_items WHERE product_id = %s AND user_id = %s",
+          (product_id, user_id)
+        )
+    existing = cursor.fetchone()
+
+    if existing:
+        if user_id is None:
+            cursor.execute(
+              "UPDATE cart_items SET quantity = quantity + %s WHERE product_id = %s AND user_id IS NULL",
+              (quantity, product_id)
+            )
+        else:
+            cursor.execute(
+              "UPDATE cart_items SET quantity = quantity + %s WHERE product_id = %s AND user_id = %s",
+              (quantity, product_id, user_id)
+            )
+    else:
+        cursor.execute(
+          "INSERT INTO cart_items (product_id, quantity, user_id) VALUES (%s, %s, %s)",
+          (product_id, quantity, user_id)
         )
 
-    db.commit()
-    cursor.close()
-    db.close()
+    db.commit(); cursor.close(); db.close()
     return jsonify({"message": "Item added to cart"}), 201
 
 

@@ -28,11 +28,15 @@ def create_app():
     from app.routes.orders   import orders_bp
     from app.routes.users    import users_bp
     from app.routes.auth     import auth_bp
+    from app.routes.payments import payments_bp
+    from app.routes.uploads   import uploads_bp
 
     app.register_blueprint(products_bp, url_prefix='/api/products')
     app.register_blueprint(cart_bp,     url_prefix='/api/cart')
     app.register_blueprint(orders_bp,   url_prefix='/api/orders')
     app.register_blueprint(users_bp,    url_prefix='/api/users')
     app.register_blueprint(auth_bp,     url_prefix="/api/auth")
+    app.register_blueprint(payments_bp, url_prefix='/api/payments')
+    app.register_blueprint(uploads_bp, url_prefix='/api/uploads')
 
     return app

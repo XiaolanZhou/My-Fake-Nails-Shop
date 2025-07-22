@@ -1,0 +1,180 @@
+import os
+import stripe
+from flask import Blueprint, jsonify, request
+from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity
+from app.db import get_db_connection
+from typing import Any
+from typing import cast
+from math import floor
+
+# Initialize Stripe with the secret key from environment variables
+stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
+
+payments_bp = Blueprint("payments", __name__)
+
+
+def _build_line_items(items):
+    """Helper to convert cart DB rows to Stripe line_items structure"""
+    line_items = []
+    for item in items:
+        # Stripe requires the amount in the smallest currency unit (cents)
+        unit_amount = int(float(item["price"]) * 100)
+        line_items.append(
+            {
+                "price_data": {
+                    "currency": "usd",
+                    "product_data": {"name": item["name"]},
+                    "unit_amount": unit_amount,
+                },
+                "quantity": int(item["quantity"]),
+            }
+        )
+    return line_items
+
+
+@payments_bp.route("/create-checkout-session", methods=["POST"])
+def create_checkout_session():
+    """Creates a Stripe Checkout Session from the current cart."""
+    # JWT is optional – allow guest checkout
+    verify_jwt_in_request(optional=True)
+    user_id = get_jwt_identity()  # None if not logged in
+
+    db = get_db_connection()
+    cur = db.cursor(dictionary=True)
+
+    # Check if client asked to apply loyalty points (for logged-in users)
+    data = request.get_json(silent=True) or {}
+    apply_points = bool(data.get("applyPoints")) and user_id is not None
+
+    if user_id is None:
+        cur.execute(
+            """
+            SELECT ci.*, p.name, p.price
+            FROM cart_items ci
+            JOIN products p ON p.id = ci.product_id
+            WHERE ci.user_id IS NULL
+            """
+        )
+    else:
+        cur.execute(
+            """
+            SELECT ci.*, p.name, p.price
+            FROM cart_items ci
+            JOIN products p ON p.id = ci.product_id
+            WHERE ci.user_id = %s
+            """,
+            (user_id,),
+        )
+    items = cur.fetchall()
+
+    if not items:
+        cur.close(); db.close()
+        return jsonify({"message": "Cart is empty"}), 400
+
+    line_items = _build_line_items(items)
+
+    # Loyalty points discount
+    discounts_param = None
+    points_used = 0
+    if apply_points:
+        cur.execute("SELECT points FROM users WHERE id=%s", (user_id,))
+        row = cur.fetchone()
+        if row and row["points"]:
+            available_pts = int(row["points"])
+            # $1 discount per 100 pts
+            discount_cents = (available_pts // 100) * 100  # in cents
+            if discount_cents > 0:
+                # Make sure discount doesn't exceed cart total
+                total_cents = sum(int(float(i["price"])*100)*int(i["quantity"]) for i in items)
+                discount_cents = min(discount_cents, total_cents)
+                if discount_cents > 0:
+                    coupon = stripe.Coupon.create(amount_off=discount_cents, currency="usd", duration="once")
+                    discounts_param = [{"coupon": coupon.id}]
+                    points_used = (discount_cents // 100) * 100  # back to points (1$=100pts)
+
+    # Metadata lets us associate the session (and later, the payment) back to a user
+    metadata = {}
+    if user_id:
+        metadata["user_id"] = str(user_id)
+        metadata["points_used"] = str(points_used)
+
+    try:
+        session = stripe.checkout.Session.create(  # type: ignore[arg-type]
+            # Support cards (includes Apple Pay when domain-verified), PayPal, and WeChat Pay
+            payment_method_types=["card", "wechat_pay"],
+            # Disable Link/Shop Pay so it doesn’t show up alongside Apple Pay
+            payment_method_options=cast(Any, {
+                # Required option for web WeChat Pay
+                "wechat_pay": {"client": "web"},
+            }),
+            mode="payment",
+            line_items=line_items,
+            success_url=os.getenv("FRONTEND_URL", "http://localhost:5173")
+            + "/orders?success=true",
+            cancel_url=os.getenv("FRONTEND_URL", "http://localhost:5173")
+            + "/cart?canceled=true",
+            metadata=metadata,
+            discounts=discounts_param,
+        )
+    except Exception as e:
+        cur.close(); db.close()
+        return jsonify({"message": "Stripe error", "detail": str(e)}), 500
+
+    cur.close(); db.close()
+    # Stripe-hosted Checkout page URL – frontend simply redirects the browser
+    return jsonify({"url": session.url}), 200
+
+
+@payments_bp.route("/webhook", methods=["POST"])
+def stripe_webhook():
+    """Stripe webhook to finalise orders once payment succeeds."""
+    payload = request.data
+    sig_header = request.headers.get("Stripe-Signature")
+    webhook_secret = os.getenv("STRIPE_WEBHOOK_SECRET")
+
+    try:
+        event = stripe.Webhook.construct_event(payload, sig_header, webhook_secret)
+    except (ValueError, stripe.error.SignatureVerificationError):  # type: ignore[attr-defined]
+        # Invalid payload or signature
+        return "", 400
+
+    if event["type"] == "checkout.session.completed":
+        session = event["data"]["object"]
+        user_id = session.get("metadata", {}).get("user_id")
+
+        # Retrieve the line items so we know what was purchased
+        line_items = stripe.checkout.Session.list_line_items(session["id"])
+
+        db = get_db_connection()
+        cur = db.cursor(dictionary=True)
+
+        for li in line_items:
+            product_name = li["description"]
+            quantity = li["quantity"]
+            cur.execute("SELECT id, price FROM products WHERE name=%s", (product_name,))
+            product = cur.fetchone()
+            if not product:
+                continue  # skip items we cannot map back
+
+            cur.execute(
+                """
+                INSERT INTO orders (user_id, product_id, quantity, status)
+                VALUES (%s, %s, %s, 'PAID')
+                """,
+                (user_id, product["id"], quantity),  # type: ignore[arg-type]
+            )
+
+        # Deduct points if used
+        if user_id and points_used:
+            cur.execute("UPDATE users SET points = points - %s WHERE id = %s", (points_used, user_id))
+
+        # Clear this user's cart after successful payment
+        if user_id is None:
+            cur.execute("DELETE FROM cart_items WHERE user_id IS NULL")
+        else:
+            cur.execute("DELETE FROM cart_items WHERE user_id = %s", (user_id,))
+        db.commit()
+        cur.close(); db.close()
+
+    # Return 200 to acknowledge receipt of the event
+    return "", 200 
