@@ -121,3 +121,16 @@ def get_order(order_id):
         "total": round(total, 2)
     }
     return jsonify(order), 200
+
+@orders_bp.route('/<int:order_item_id>/mark-reviewed', methods=['PATCH'])
+@jwt_required()
+def mark_reviewed(order_item_id):
+    user_id = get_jwt_identity()
+    db = get_db_connection(); cur = db.cursor()
+    cur.execute(
+        "UPDATE orders SET status='completed' "
+        "WHERE id=%s AND user_id=%s AND status='review'",
+        (order_item_id, user_id),
+    )
+    db.commit(); cur.close(); db.close()
+    return '', 204

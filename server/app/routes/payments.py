@@ -3,8 +3,7 @@ import stripe
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity
 from app.db import get_db_connection
-from typing import Any
-from typing import cast
+from typing import Any, Dict, cast, Sequence
 from math import floor
 
 # Initialize Stripe with the secret key from environment variables
@@ -71,6 +70,18 @@ def create_checkout_session():
         cur.close(); db.close()
         return jsonify({"message": "Cart is empty"}), 400
 
+    # Insert unpaid orders so they appear immediately if payment is abandoned
+    for it in items:
+        r = cast(Dict[str, Any], it)
+        cur.execute(
+            """
+            INSERT INTO orders (user_id, product_id, quantity, status)
+            VALUES (%s, %s, %s, 'unpaid')
+            """,
+            (user_id, int(r["product_id"]), int(r["quantity"])),
+        )
+    db.commit()
+
     line_items = _build_line_items(items)
 
     # Loyalty points discount
@@ -78,7 +89,7 @@ def create_checkout_session():
     points_used = 0
     if apply_points:
         cur.execute("SELECT points FROM users WHERE id=%s", (user_id,))
-        row = cur.fetchone()
+        row = cast(Dict[str, Any] | None, cur.fetchone())
         if row and row["points"]:
             available_pts = int(row["points"])
             # $1 discount per 100 pts
@@ -91,9 +102,29 @@ def create_checkout_session():
                     coupon = stripe.Coupon.create(amount_off=discount_cents, currency="usd", duration="once")
                     discounts_param = [{"coupon": coupon.id}]
                     points_used = (discount_cents // 100) * 100  # back to points (1$=100pts)
-
     # Metadata lets us associate the session (and later, the payment) back to a user
-    metadata = {}
+    metadata: Dict[str, str] = {}
+    # Promo code discount
+    promo_code = data.get("promoCode") if data else None
+    if promo_code:
+        cur.execute(
+            "SELECT id, amount_off_cents, active, max_redemptions, times_redeemed FROM promo_codes WHERE code=%s",
+            (promo_code,)
+        )
+        pr = cast(Dict[str, Any] | None, cur.fetchone())
+        if pr and pr["active"] and (
+                pr["max_redemptions"] is None
+                or pr["times_redeemed"] < pr["max_redemptions"]
+        ):
+            pc_amount = int(pr["amount_off_cents"])           # type: ignore[index]
+            coupon = stripe.Coupon.create(amount_off=pc_amount, currency="usd", duration="once")
+            if discounts_param is None:
+                discounts_param = []
+            discounts_param.append({"coupon": coupon.id})
+            # mark redemption (do later after payment success) we store promo_id
+            metadata["promo_id"] = str(pr["id"]) if user_id else "guest"
+
+    discounts: list[Dict[str, str]] = []
     if user_id:
         metadata["user_id"] = str(user_id)
         metadata["points_used"] = str(points_used)
@@ -140,7 +171,10 @@ def stripe_webhook():
 
     if event["type"] == "checkout.session.completed":
         session = event["data"]["object"]
-        user_id = session.get("metadata", {}).get("user_id")
+        meta = session.get("metadata", {})
+        user_id     = meta.get("user_id")
+        points_used = int(meta.get("points_used", "0"))      # <- from metadata
+        promo_id    = meta.get("promo_id")
 
         # Retrieve the line items so we know what was purchased
         line_items = stripe.checkout.Session.list_line_items(session["id"])
@@ -174,6 +208,13 @@ def stripe_webhook():
         else:
             cur.execute("DELETE FROM cart_items WHERE user_id = %s", (user_id,))
         db.commit()
+
+        # Back-end redemption counter
+        if promo_id and promo_id.isdigit():
+            cur.execute(
+                "UPDATE promo_codes SET times_redeemed = times_redeemed + 1 WHERE id=%s",
+                (promo_id,)
+            )
         cur.close(); db.close()
 
     # Return 200 to acknowledge receipt of the event
