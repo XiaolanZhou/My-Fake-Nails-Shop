@@ -8,12 +8,15 @@ import OrdersPage from './pages/Orders';
 import ProductDetails from './components/ProductDetails';
 import LoginPage from './pages/Login';
 import RegisterPage from './pages/Register';
+import PetalCanvas from './components/PetalCanvas';
 
 
 const App = () => (
   <div className="flex flex-col min-h-screen">
     <Navbar />
-    <main className="flex-grow">
+    <PetalCanvas />
+    <main className="flex justify-center">
+      <div className="w-full max-w-[1200px] px-4">
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/cart" element={<Cart />} />
@@ -22,6 +25,7 @@ const App = () => (
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/products/:id" element={<ProductDetails />} />
       </Routes>
+      </div>
     </main>
     <Footer />
   </div>

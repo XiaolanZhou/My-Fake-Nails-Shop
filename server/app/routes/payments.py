@@ -108,23 +108,41 @@ def create_checkout_session():
     promo_code = data.get("promoCode") if data else None
     if promo_code:
         cur.execute(
-            "SELECT id, amount_off_cents, active, max_redemptions, times_redeemed FROM promo_codes WHERE code=%s",
+            """
+            SELECT id, amount_off_cents, percent_off, type,
+                   active, max_redemptions, times_redeemed
+            FROM promo_codes
+            WHERE code=%s
+            """,
             (promo_code,)
         )
         pr = cast(Dict[str, Any] | None, cur.fetchone())
+
         if pr and pr["active"] and (
-                pr["max_redemptions"] is None
-                or pr["times_redeemed"] < pr["max_redemptions"]
+            pr["max_redemptions"] is None or
+            pr["times_redeemed"] < pr["max_redemptions"]
         ):
-            pc_amount = int(pr["amount_off_cents"])           # type: ignore[index]
-            coupon = stripe.Coupon.create(amount_off=pc_amount, currency="usd", duration="once")
+            # ---------- create a Stripe coupon ----------
+            if pr["type"] == "amount":
+                coupon = stripe.Coupon.create(
+                    amount_off = pr["amount_off_cents"],
+                    currency   = "usd",
+                    duration   = "once",
+                )
+            else:  # percent
+                coupon = stripe.Coupon.create(
+                    percent_off = pr["percent_off"],
+                    duration    = "once",
+                )
+            # --------------------------------------------
+
             if discounts_param is None:
                 discounts_param = []
             discounts_param.append({"coupon": coupon.id})
-            # mark redemption (do later after payment success) we store promo_id
-            metadata["promo_id"] = str(pr["id"]) if user_id else "guest"
 
-    discounts: list[Dict[str, str]] = []
+            metadata["promo_id"]   = str(pr["id"]) if user_id else "guest"
+            metadata["promo_code"] = promo_code
+
     if user_id:
         metadata["user_id"] = str(user_id)
         metadata["points_used"] = str(points_used)
@@ -219,3 +237,29 @@ def stripe_webhook():
 
     # Return 200 to acknowledge receipt of the event
     return "", 200 
+
+# server/app/routes/promos.py
+@payments_bp.route('/validate-code', methods=['POST'])
+def validate_code():
+    code = request.get_json().get('code', '').strip()
+    db = get_db_connection()
+    cur = db.cursor(dictionary=True)
+    cur.execute("""
+        SELECT amount_off_cents, percent_off, type
+        FROM promo_codes
+        WHERE code=%s AND active=1
+          AND (max_redemptions IS NULL OR times_redeemed < max_redemptions)
+    """, (code,))
+    row = cast(Dict[str, Any] | None, cur.fetchone())
+    if not row:
+        cur.close(); 
+        db.close()
+        return jsonify({"valid": False}), 200
+    cur.close(); 
+    db.close()
+    return jsonify({
+        "valid": True,
+        "type": row["type"],
+        "amount_off": row["amount_off_cents"] / 100,
+        "percent_off": row["percent_off"],
+    }), 200

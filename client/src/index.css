@@ -10,3 +10,21 @@
   -ms-overflow-style: none;  /* IE and Edge */
   scrollbar-width: none;     /* Firefox */
 }
+
+body {
+  background: #f1bbdf;
+}
+
+/* canvas behind everything */
+#petal-canvas {
+  position: fixed;
+  inset: 0;
+  z-index: 0;          /* navbar/text sit above */
+  pointer-events: none;
+}
+
+/* give main content a higher z-index */
+main > div {
+  position: relative;
+  z-index: 10;
+}

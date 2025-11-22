@@ -7,6 +7,10 @@ const CartPage = () => {
     const [cartItems, setCartItems] = useState([]);
     const { token, user } = useAuth();
     const [applyPoints, setApplyPoints] = useState(false);
+    const [promo, setPromo] = useState('');
+    const [showPromo, setShowPromo] = useState(false);
+    const [promoMsg, setPromoMsg] = useState(null);
+    const [localPromoDiscount, setLocalPromoDiscount] = useState(0);
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -79,7 +83,29 @@ const CartPage = () => {
     const pointsAvailable = user?.points ?? 0;        // 10 pts per $1 earned
     const pointsDollarValue = (pointsAvailable / 100); // $1 off per 100 pts
     const discount = applyPoints ? Math.min(pointsDollarValue, total) : 0;
-    const grandTotal = (total - discount).toFixed(2);
+    const grandTotal = (total - discount - localPromoDiscount).toFixed(2);
+
+    const applyPromo = () => {
+        fetch('http://localhost:5001/api/payments/validate-code', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code: promo.trim() })
+        })
+            .then(r => r.json())
+            .then(res => {
+                if (!res.valid) {
+                    setPromoMsg({ ok: false, text: 'Promo code not valid.' });
+                } else {
+                    setPromoMsg({ ok: true,  text: 'Promo code successfully applied!' });
+                    // compute local discount so total shows immediately
+                    let promoDiscount = res.type === 'amount'
+                        ? res.amount_off
+                        : total * (res.percent_off / 100);
+                    setLocalPromoDiscount(promoDiscount);
+                }
+                setShowPromo(false);
+            })
+    }
 
     const handleCheckout = () => {
         fetch('http://localhost:5001/api/payments/create-checkout-session', {
@@ -88,12 +114,18 @@ const CartPage = () => {
                 'Content-Type': 'application/json',
                 ...(token ? { Authorization: `Bearer ${token}` } : {}),
             },
-            body: JSON.stringify({ applyPoints }),
+            body: JSON.stringify({
+                applyPoints,
+                promoCode: promo.trim() || undefined,
+            }),
         })
-            .then(res => res.json())
-            .then(({ url }) => {
-                if (!url) throw new Error('Unable to initiate payment')
-                window.location.href = url // Redirect browser to Stripe Checkout
+            .then(res => res.json().then(body => ({ ok: res.ok, body })))
+            .then(({ ok, body }) => {
+                if (!ok) {
+                    setPromoMsg({ ok:false, text: body.message || 'Promo code not valid.' });
+                    return;
+                }
+                window.location.href = body.url;
             })
             .catch(err => console.error('Checkout failed:', err))
     }
@@ -141,32 +173,63 @@ const CartPage = () => {
             )}
             {cartItems.length > 0 && (
                 <>
+                    {/* ---------- Promo code bar ---------- */}
+                    <div className="mt-4">
+                        {!showPromo ? (
+                            <button
+                                onClick={() => setShowPromo(true)}
+                                className="text-sm text-pink-600 hover:underline"
+                            >
+                                + Add coupon / gift card
+                            </button>
+                        ) : (
+                            <div className="flex gap-2 items-end">
+                                <input
+                                    value={promo}
+                                    onChange={(e) => setPromo(e.target.value)}
+                                    placeholder="Enter code"
+                                    className="border px-2 py-1 rounded flex-1"
+                                />
+                                <button
+                                    onClick={applyPromo}
+                                    className="bg-pink-600 text-white px-3 py-1 rounded"
+                                >
+                                    Apply
+                                </button>
+                                <button
+                                    onClick={() => { setPromo(''); setShowPromo(false); }}
+                                    className="text-sm text-gray-500"
+                                    title="Clear"
+                                >
+                                    ✕
+                                </button>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* ------------- Existing points + total ------------- */}
                     {token && (
                         <div className="mt-2">
                             <label className="inline-flex items-center gap-2">
                                 <input
-                                  type="checkbox"
-                                  className="form-checkbox"
-                                  checked={applyPoints}
-                                  onChange={e => setApplyPoints(e.target.checked)}
+                                    type="checkbox"
+                                    className="form-checkbox"
+                                    checked={applyPoints}
+                                    onChange={e => setApplyPoints(e.target.checked)}
                                 />
                                 Apply my points
                             </label>
                         </div>
                     )}
-                    <div className="mt-4">
-                      {applyPoints && discount > 0 ? (
-                        <>
-                          <span className="text-gray-500 line-through mr-2 text-lg">
-                            ${total.toFixed(2)}
-                          </span>
-                          <span className="text-4xl font-bold text-red-600">
-                            ${grandTotal}
-                          </span>
-                        </>
-                      ) : (
-                        <span className="text-lg font-bold">${total.toFixed(2)}</span>
-                      )}
+                    {promoMsg && (
+                        <p className={
+                            promoMsg.ok ? 'text-sm text-gray-800' : 'text-sm text-red-600'
+                        }>
+                            {promoMsg.text}
+                        </p>
+                    )}
+                    <div className="mt-4 font-bold text-lg">
+                        Total: ${grandTotal}
                     </div>
                     <button
                         onClick={handleCheckout}
