@@ -18,10 +18,25 @@ const Navbar = () => {
       </div>
 
       <nav className="bg-white/90 backdrop-blur border-b border-pink-100 shadow-sm">
-        <div className="max-w-6xl mx-auto px-4 lg:px-8 h-16 flex items-center justify-between">
-          <Link to="/" className="text-2xl font-display font-semibold text-pink-700 tracking-wider">
-            PHEW
-          </Link>
+        <div className="max-w-6xl mx-auto px-4 lg:px-8 h-16 flex items-center justify-between gap-6">
+          <div className="flex items-center gap-6">
+            <Link to="/" className="text-2xl font-display font-semibold text-pink-700 tracking-wider">
+              PHEW
+            </Link>
+            <Link
+              to="/orders"
+              className="inline-flex items-center gap-1 text-sm font-medium text-pink-600 hover:text-pink-700 transition"
+            >
+              Orders
+            </Link>
+            <Link
+              to="/cart"
+              className="inline-flex items-center gap-2 rounded-full border border-pink-200 px-4 py-2 text-sm font-medium text-pink-600 hover:border-pink-400 hover:text-pink-700 transition"
+            >
+              <ShoppingBag size={16} />
+              Cart
+            </Link>
+          </div>
 
           <div className="hidden md:flex items-center gap-8 text-sm font-medium text-gray-700">
             <Link to="/" className="hover:text-pink-600 transition">Best Sellers</Link>
@@ -35,21 +50,6 @@ const Navbar = () => {
             <button className="hidden sm:inline-flex items-center justify-center w-9 h-9 rounded-full border border-pink-100 shadow-sm hover:text-pink-600 hover:border-pink-300 transition">
               <Search size={18} />
             </button>
-
-            <Link
-              to="/orders"
-              className="inline-flex items-center gap-1 text-sm font-medium text-pink-600 hover:text-pink-700 transition"
-            >
-              <span>Orders</span>
-            </Link>
-
-            <Link
-              to="/cart"
-              className="inline-flex items-center gap-2 rounded-full border border-pink-200 px-4 py-2 text-sm font-medium text-pink-600 hover:border-pink-400 hover:text-pink-700 transition"
-            >
-              <ShoppingBag size={16} />
-              Cart
-            </Link>
 
             {isAuthenticated ? (
               <div className="flex flex-col items-end leading-tight">
