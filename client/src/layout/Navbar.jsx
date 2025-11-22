@@ -18,8 +18,7 @@ const Navbar = () => {
       </div>
 
       <nav className="bg-white/90 backdrop-blur border-b border-pink-100 shadow-sm">
-      <div className="max-w-6xl mx-auto px-4 lg:px-8 h-16 flex items-center justify-between gap-6">
-
+        <div className="max-w-6xl mx-auto px-4 lg:px-8 h-16 flex items-center justify-between gap-6">
           <div className="flex items-center gap-6">
             <Link to="/" className="text-2xl font-display font-semibold text-pink-700 tracking-wider">
               PHEW
@@ -51,8 +50,6 @@ const Navbar = () => {
             <button className="hidden sm:inline-flex items-center justify-center w-9 h-9 rounded-full border border-pink-100 shadow-sm hover:text-pink-600 hover:border-pink-300 transition">
               <Search size={18} />
             </button>
-
-            
 
             {isAuthenticated ? (
               <div className="flex flex-col items-end leading-tight">
