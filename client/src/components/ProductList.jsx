@@ -119,7 +119,7 @@ export default function ProductList() {
         </form>
 
         {/* Product grid */}
-        <div className="grid gap-10 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 justify-items-center">
+        <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 justify-items-center">
           {products.map(p => (
             <ProductCard key={p.id} product={p} onAddToCart={handleAdd} />
           ))}
