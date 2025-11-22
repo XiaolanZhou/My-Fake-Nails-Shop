@@ -36,12 +36,19 @@ const Navbar = () => {
               <Search size={18} />
             </button>
 
-            <Link to="/orders" className="hidden sm:inline text-sm font-medium hover:text-pink-600 transition">
-              Orders
+            <Link
+              to="/orders"
+              className="inline-flex items-center gap-1 text-sm font-medium text-pink-600 hover:text-pink-700 transition"
+            >
+              <span>Orders</span>
             </Link>
 
-            <Link to="/cart" className="relative inline-flex items-center justify-center w-10 h-10 rounded-full bg-pink-100 text-pink-700 hover:bg-pink-200 transition">
-              <ShoppingBag size={18} />
+            <Link
+              to="/cart"
+              className="inline-flex items-center gap-2 rounded-full border border-pink-200 px-4 py-2 text-sm font-medium text-pink-600 hover:border-pink-400 hover:text-pink-700 transition"
+            >
+              <ShoppingBag size={16} />
+              Cart
             </Link>
 
             {isAuthenticated ? (
