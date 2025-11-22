@@ -23,3 +23,14 @@ stripe listen --forward-to localhost:5001/api/payments/webhook
 5. Copy the signing secret shown in the CLI to `STRIPE_WEBHOOK_SECRET`.
 
 Once configured, pressing **Checkout** in the cart will redirect customers to a Stripe-hosted payment page. After successful payment, they are returned to `/orders` and their order is recorded in the database.
+
+
+To run:
+at root, source .venv/bin/activate
+
+run the backend:
+python server/run.py
+
+run the frontend:
+cd client
+npm run dev
