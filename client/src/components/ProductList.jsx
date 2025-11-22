@@ -61,25 +61,28 @@ export default function ProductList() {
 
   return (
     <>
-      <div className="px-4 max-w-6xl mx-auto">
+      <div className="space-y-10">
         {/* Search / filter form */}
-        <form onSubmit={handleSearchSubmit} className="flex flex-wrap gap-4 mb-6 items-end">
-          <div>
-            <label className="block text-sm font-medium mb-1">Search</label>
+        <form
+          onSubmit={handleSearchSubmit}
+          className="bg-white/80 backdrop-blur border border-pink-100 rounded-3xl shadow-sm px-5 py-6 flex flex-wrap items-end gap-4"
+        >
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium uppercase text-gray-500 tracking-wide">Search</label>
             <input
               type="text"
               value={q}
               onChange={e => setQ(e.target.value)}
-              className="border px-2 py-1 rounded w-48"
+              className="border border-pink-100 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-200"
               placeholder="keywords"
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Sort by</label>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium uppercase text-gray-500 tracking-wide">Sort by</label>
             <select
               value={sort}
               onChange={e => { setSort(e.target.value); setPage(1); }}
-              className="border px-2 py-1 rounded"
+              className="border border-pink-100 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-200"
             >
               <option value="">Default</option>
               <option value="rating">Rating</option>
@@ -87,55 +90,55 @@ export default function ProductList() {
               <option value="price_desc">Price: High to Low</option>
             </select>
           </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Min price</label>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium uppercase text-gray-500 tracking-wide">Min price</label>
             <input
               type="number"
               step="0.01"
               value={priceMin}
               onChange={e => setPriceMin(e.target.value)}
-              className="border px-2 py-1 rounded w-28"
+              className="border border-pink-100 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-200"
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Max price</label>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium uppercase text-gray-500 tracking-wide">Max price</label>
             <input
               type="number"
               step="0.01"
               value={priceMax}
               onChange={e => setPriceMax(e.target.value)}
-              className="border px-2 py-1 rounded w-28"
+              className="border border-pink-100 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-200"
             />
           </div>
-          <button className="bg-pink-600 text-white px-4 py-2 rounded hover:bg-pink-700" type="submit">
+          <button
+            className="ml-auto inline-flex items-center gap-2 rounded-full bg-pink-500 px-5 py-2 text-sm font-semibold text-white shadow hover:bg-pink-600 transition"
+            type="submit"
+          >
             Apply
           </button>
         </form>
-        {/* 4 columns of fixed width 16rem, centered */}
-        <div
-          className="grid gap-6 justify-center"
-          style={{ gridTemplateColumns: 'repeat(4,16rem)' }}
-        >
+
+        {/* Product grid */}
+        <div className="grid gap-10 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 justify-items-center">
           {products.map(p => (
-            <div key={p.id} className="w-64">
-              <ProductCard product={p} onAddToCart={handleAdd} />
-            </div>
+            <ProductCard key={p.id} product={p} onAddToCart={handleAdd} />
           ))}
         </div>
+
         {/* Pagination */}
-        <div className="flex justify-center gap-4 mt-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-center gap-4 mt-4 text-sm">
           <button
-            className="px-3 py-1 border rounded disabled:opacity-50"
+            className="px-4 py-2 border border-pink-200 rounded-full disabled:opacity-40 disabled:cursor-not-allowed hover:border-pink-400 transition"
             disabled={page <= 1}
             onClick={() => setPage(p => Math.max(1, p - 1))}
           >
             Previous
           </button>
-          <span className="self-center font-medium">
+          <span className="font-medium text-gray-600">
             Page {page} of {totalPages}
           </span>
           <button
-            className="px-3 py-1 border rounded disabled:opacity-50"
+            className="px-4 py-2 border border-pink-200 rounded-full disabled:opacity-40 disabled:cursor-not-allowed hover:border-pink-400 transition"
             disabled={page >= totalPages}
             onClick={() => setPage(p => Math.min(totalPages, p + 1))}
           >

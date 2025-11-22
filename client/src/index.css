@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -12,7 +14,14 @@
 }
 
 body {
-  background: #f1bbdf;
+  font-family: 'Inter', sans-serif;
+  background: radial-gradient(circle at top, #ffe3f3 0%, #f7c9e6 45%, #f1bbdf 100%);
+  color: #2f1c2e;
+  min-height: 100vh;
+}
+
+h1, h2, h3, .font-display {
+  font-family: 'Playfair Display', serif;
 }
 
 /* canvas behind everything */

@@ -13,7 +13,7 @@ def get_cart():
   db = get_db_connection()
   cursor = db.cursor(dictionary=True)
   if user_id is None:
-      cursor.execute("""
+  cursor.execute("""
         SELECT ci.id AS cart_item_id, p.id AS product_id, p.name, p.description, p.price, p.image_url, ci.quantity
         FROM cart_items ci JOIN products p ON p.id = ci.product_id
         WHERE ci.user_id IS NULL
@@ -42,10 +42,10 @@ def add_to_cart():
     cursor = db.cursor(dictionary=True)
 
     if user_id is None:
-        cursor.execute(
+    cursor.execute(
           "SELECT quantity FROM cart_items WHERE product_id = %s AND user_id IS NULL",
-          (product_id,)
-        )
+      (product_id,)
+    )
     else:
         cursor.execute(
           "SELECT quantity FROM cart_items WHERE product_id = %s AND user_id = %s",
@@ -55,10 +55,10 @@ def add_to_cart():
 
     if existing:
         if user_id is None:
-            cursor.execute(
+        cursor.execute(
               "UPDATE cart_items SET quantity = quantity + %s WHERE product_id = %s AND user_id IS NULL",
-              (quantity, product_id)
-            )
+          (quantity, product_id)
+        )
         else:
             cursor.execute(
               "UPDATE cart_items SET quantity = quantity + %s WHERE product_id = %s AND user_id = %s",
