@@ -1,4 +1,4 @@
-# MY1STWEBSITE
+# My-Fake-Nails-Shop
 
 ## Payments (Stripe)
 
