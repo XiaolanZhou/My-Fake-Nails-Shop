@@ -1,8 +1,8 @@
 from flask import Blueprint, request, jsonify
 from app.db import get_db_connection
-from app.__init__ import bcrypt
+from app import bcrypt
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
-from mysql.connector.errors import IntegrityError, Error as MySQLError
+from psycopg2 import IntegrityError, Error as DBError
 from typing import Any, Dict, cast
 
 auth_bp = Blueprint("auth", __name__)
@@ -13,7 +13,7 @@ def register():
     cursor = db.cursor()
     data = request.get_json()
     email    = data.get("email")
-    username = data.get("username") or email  # allow email to serve as username
+    username = data.get("username") or email
     password = data.get("password")
 
     if not username or not password:
@@ -27,14 +27,11 @@ def register():
         )
         db.commit()
     except IntegrityError as e:
-        # 1062 = duplicate entry error code in MySQL
-        if getattr(e, 'errno', None) == 1062:
-            cursor.close(); db.close()
-            return jsonify({"msg": "Username taken"}), 409
-        else:
-            cursor.close(); db.close()
-            return jsonify({"msg": "Database integrity error", "detail": str(e)}), 400
-    except MySQLError as e:
+        db.rollback()
+        cursor.close(); db.close()
+        return jsonify({"msg": "Username or email already taken"}), 409
+    except DBError as e:
+        db.rollback()
         cursor.close(); db.close()
         return jsonify({"msg": "Database error", "detail": str(e)}), 500
 
@@ -47,7 +44,7 @@ def login():
     db = get_db_connection()
     cursor = db.cursor()
     data = request.get_json()
-    identifier = data.get("identifier")   # could be 'boss' or 'boss@mail.com'
+    identifier = data.get("identifier")
     password   = data.get("password")
 
     cursor.execute(
@@ -58,18 +55,13 @@ def login():
       """,
       (identifier, identifier)
     )
-    # MySQL connector returns dict rows when dictionary=True, but type stubs do not reflect this.
-    # Cast to the expected dict type so static type checkers (e.g., Pyright) understand indexing by str.
-    user_row = cursor.fetchone()
-    user = cast(Dict[str, Any] | None, user_row)
+    user = cursor.fetchone()
 
-    # If the user doesn't exist, abort early before attempting to access row fields.
     if user is None:
         cursor.close()
         db.close()
         return jsonify({"msg": "Bad credentials"}), 401
 
-    # Validate password hash.
     if not bcrypt.check_password_hash(user["password_hash"], password):
         cursor.close()
         db.close()
@@ -80,10 +72,10 @@ def login():
               additional_claims={"username": user["username"]}
             )
 
-    # Attach any guest cart items (user_id IS NULL) to this user
+    # Attach any guest cart items to this user
     cursor.execute("UPDATE cart_items SET user_id = %s WHERE user_id IS NULL", (user["id"],))
     db.commit()
-    # return in both body and header for convenience
+    
     resp = jsonify({"access_token": token})
     resp.headers["Authorization"] = f"Bearer {token}"
     cursor.close()
@@ -102,5 +94,6 @@ def me():
     u = cursor.fetchone()
     cursor.close()
     db.close()
-    return jsonify(u), 200
-
+    if u is None:
+        return jsonify({"msg": "User not found"}), 404
+    return jsonify(dict(u)), 200
