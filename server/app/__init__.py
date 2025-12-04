@@ -1,3 +1,4 @@
+import os
 from flask import Flask
 from flask_cors import CORS
 from flask_bcrypt import Bcrypt
@@ -9,12 +10,20 @@ jwt    = JWTManager()
 
 def create_app():
     app = Flask(__name__)
-    app.config["JWT_SECRET_KEY"] = "veryevrueSeCRETlkauwexyvskty"
+    app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY", "dev-secret-key")
 
-    # allow ONLY your Vite dev server to hit any /api/* URL
+    # Allow localhost (dev) and production frontend
+    allowed_origins = [
+        "http://localhost:5173",
+        "https://my-fake-nails-shop.vercel.app",
+    ]
+    frontend_url = os.getenv("FRONTEND_URL")
+    if frontend_url:
+        allowed_origins.append(frontend_url)
+
     CORS(app, resources={
       r"/api/*": {
-        "origins": "http://localhost:5173"
+        "origins": allowed_origins
       }
     })
     app.url_map.strict_slashes = False
