@@ -17,14 +17,20 @@ app = Flask(__name__)
 # Use environment variables for secrets
 app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY", "dev-secret-key")
 
-# Allow both localhost (dev) and Vercel (prod)
+# Allow localhost (dev), Vercel preview, and custom domains
+allowed_origins = [
+    "http://localhost:5173",
+    "https://my-fake-nails-shop.vercel.app",
+    "https://meowoem.com",
+    "https://www.meowoem.com",
+]
+frontend_url = os.getenv("FRONTEND_URL")
+if frontend_url:
+    allowed_origins.append(frontend_url)
+
 CORS(app, resources={
     r"/api/*": {
-        "origins": [
-            "http://localhost:5173",
-            "https://my-fake-nails-shop.vercel.app",
-            os.getenv("FRONTEND_URL", "")
-        ]
+        "origins": allowed_origins
     }
 })
 app.url_map.strict_slashes = False
