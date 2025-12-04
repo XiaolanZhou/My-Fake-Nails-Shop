@@ -4,7 +4,7 @@ import os
 # Add server directory to path so imports work
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'server'))
 
-from flask import Flask
+from flask import Flask, jsonify
 from flask_cors import CORS
 from flask_bcrypt import Bcrypt
 from flask_jwt_extended import JWTManager
@@ -59,3 +59,32 @@ app.register_blueprint(uploads_bp, url_prefix='/api/uploads')
 @app.route('/api/health')
 def health():
     return {"status": "ok"}
+
+# Debug endpoint to test database
+@app.route('/api/debug')
+def debug():
+    try:
+        db_url = os.getenv("DATABASE_URL") or os.getenv("POSTGRES_URL")
+        has_db_url = bool(db_url)
+        
+        # Try to connect
+        from app.db import get_db_connection
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT COUNT(*) as count FROM products")
+        row = cur.fetchone()
+        count = row['count'] if row else 0
+        cur.close()
+        conn.close()
+        
+        return jsonify({
+            "status": "ok",
+            "has_database_url": has_db_url,
+            "product_count": count
+        })
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "error": str(e),
+            "has_database_url": bool(os.getenv("DATABASE_URL") or os.getenv("POSTGRES_URL"))
+        }), 500
