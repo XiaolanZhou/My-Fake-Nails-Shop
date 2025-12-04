@@ -12,3 +12,4 @@ stripe==8.5.0
 Flask-Bcrypt==1.0.1
 Flask-JWT-Extended==4.6.0
 Pillow==10.3.0
+requests==2.31.0
