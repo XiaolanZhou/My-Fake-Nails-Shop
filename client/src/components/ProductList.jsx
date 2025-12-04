@@ -4,6 +4,7 @@ import { ToastContainer, toast } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 import ProductCard from './ProductCard'
 import { useAuth } from '../context/AuthContext.jsx'
+import { api } from '../config/api'
 
 export default function ProductList() {
   const [products, setProducts] = useState([])
@@ -26,7 +27,7 @@ export default function ProductList() {
     params.append('page', page)
     params.append('per_page', 8)
 
-    fetch(`http://localhost:5001/api/products?${params.toString()}`)
+    fetch(api(`/api/products?${params.toString()}`))
       .then(r => r.json())
       .then(data => {
         setProducts(data.items)
@@ -46,7 +47,7 @@ export default function ProductList() {
   }
 
   const handleAdd = product => {
-    fetch('http://localhost:5001/api/cart/add', {
+    fetch(api('/api/cart/add'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

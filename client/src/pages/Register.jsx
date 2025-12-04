@@ -4,6 +4,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext.jsx'
 import { ToastContainer, toast } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
+import { api } from '../config/api'
 
 export default function RegisterPage() {
   const [form, setForm] = useState({ identifier: '', password: '' })
@@ -19,7 +20,7 @@ export default function RegisterPage() {
     e.preventDefault()
     setLoading(true)
     try {
-      const res = await fetch('http://localhost:5001/api/auth/register', {
+      const res = await fetch(api('/api/auth/register'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -81,4 +82,4 @@ export default function RegisterPage() {
       <ToastContainer />
     </div>
   )
-} 
+}

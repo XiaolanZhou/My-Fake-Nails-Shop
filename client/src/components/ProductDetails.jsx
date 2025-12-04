@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
+import { api } from '../config/api';
 
 export default function ProductDetails() {
   const { id } = useParams();
@@ -7,7 +8,7 @@ export default function ProductDetails() {
   const [selectedImage, setSelectedImage] = useState(null);
 
   useEffect(() => {
-    fetch(`http://localhost:5001/api/products/${id}`)
+    fetch(api(`/api/products/${id}`))
       .then(res => res.json())
       .then(data => {
         setProduct(data);

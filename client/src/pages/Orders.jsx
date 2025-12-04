@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useNavigate } from 'react-router-dom'
+import { api } from '../config/api'
 
 const TABS = ['All Orders', 'Unpaid', 'Processing', 'Shipped', 'Review']
 
@@ -19,7 +20,7 @@ export default function OrdersPage() {
       navigate('/login')
       return
     }
-    fetch('http://localhost:5001/api/orders', {
+    fetch(api('/api/orders'), {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((res) => res.json())
@@ -59,7 +60,7 @@ export default function OrdersPage() {
       {/* Orders Content */}
       <div className="space-y-6">
         {filteredOrders.length === 0 ? (
-          <p className="text-gray-500">No orders in “{selectedTab}”</p>
+          <p className="text-gray-500">No orders in "{selectedTab}"</p>
         ) : (
           filteredOrders.map(order => (
             <div key={order.order_id} className="border rounded-lg p-4 space-y-2 shadow bg-white">

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
+import { api } from '../config/api';
 
 const CartPage = () => {
     const [cartItems, setCartItems] = useState([]);
@@ -14,7 +15,7 @@ const CartPage = () => {
     const navigate = useNavigate();
 
     useEffect(() => {
-        fetch('http://localhost:5001/api/cart/', {
+        fetch(api('/api/cart/'), {
             headers: token ? { Authorization: `Bearer ${token}` } : {},
         })
             .then(res => res.json())
@@ -23,7 +24,7 @@ const CartPage = () => {
     }, [token]);
 
     const handleRemove = (cartItemId) => {
-        fetch(`http://localhost:5001/api/cart/remove/${cartItemId}`, {
+        fetch(api(`/api/cart/remove/${cartItemId}`), {
             method: 'DELETE',
             headers: token ? { Authorization: `Bearer ${token}` } : {},
         })
@@ -35,14 +36,14 @@ const CartPage = () => {
 
     const updateQuantity = (cartItemId, type) => {
         const route = type === 'increase' ? 'increase' : 'decrease';
-        fetch(`http://localhost:5001/api/cart/${route}/${cartItemId}`, {
+        fetch(api(`/api/cart/${route}/${cartItemId}`), {
             method: 'PATCH',
             headers: token ? { Authorization: `Bearer ${token}` } : {},
         })
             .then(res => {
                 if (res.ok) return res.json();
                 if (!res.ok && type === 'decrease') {
-                    return fetch(`http://localhost:5001/api/cart/remove/${cartItemId}`, {
+                    return fetch(api(`/api/cart/remove/${cartItemId}`), {
                         method: 'DELETE',
                         headers: token ? { Authorization: `Bearer ${token}` } : {},
                     }).then(() => ({ removed: true }));
@@ -86,7 +87,7 @@ const CartPage = () => {
     const grandTotal = (total - discount - localPromoDiscount).toFixed(2);
 
     const applyPromo = () => {
-        fetch('http://localhost:5001/api/payments/validate-code', {
+        fetch(api('/api/payments/validate-code'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ code: promo.trim() })
@@ -108,7 +109,7 @@ const CartPage = () => {
     }
 
     const handleCheckout = () => {
-        fetch('http://localhost:5001/api/payments/create-checkout-session', {
+        fetch(api('/api/payments/create-checkout-session'), {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

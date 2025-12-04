@@ -1,5 +1,6 @@
 // client/src/context/AuthContext.jsx
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import { api } from '../config/api'
 
 const AuthContext = createContext({
   token: null,
@@ -16,7 +17,7 @@ export const AuthProvider = ({ children }) => {
   const fetchUser = useCallback(async (tok) => {
     if (!tok) return setUser(null)
     try {
-      const res = await fetch('http://localhost:5001/api/auth/me', {
+      const res = await fetch(api('/api/auth/me'), {
         headers: { Authorization: `Bearer ${tok}` },
       })
       if (res.ok) {
@@ -41,7 +42,7 @@ export const AuthProvider = ({ children }) => {
   }, [token, fetchUser])
 
   const login = async (identifier, password) => {
-    const res = await fetch('http://localhost:5001/api/auth/login', {
+    const res = await fetch(api('/api/auth/login'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ identifier, password }),
@@ -70,4 +71,4 @@ export const AuthProvider = ({ children }) => {
   )
 }
 
-export const useAuth = () => useContext(AuthContext) 
+export const useAuth = () => useContext(AuthContext)
