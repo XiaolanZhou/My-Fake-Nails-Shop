@@ -39,7 +39,7 @@ def create_checkout_session():
     user_id = get_jwt_identity()  # None if not logged in
 
     db = get_db_connection()
-    cur = db.cursor(dictionary=True)
+    cur = db.cursor()
 
     # Check if client asked to apply loyalty points (for logged-in users)
     data = request.get_json(silent=True) or {}
@@ -198,7 +198,7 @@ def stripe_webhook():
         line_items = stripe.checkout.Session.list_line_items(session["id"])
 
         db = get_db_connection()
-        cur = db.cursor(dictionary=True)
+        cur = db.cursor()
 
         for li in line_items:
             product_name = li["description"]
@@ -243,7 +243,7 @@ def stripe_webhook():
 def validate_code():
     code = request.get_json().get('code', '').strip()
     db = get_db_connection()
-    cur = db.cursor(dictionary=True)
+    cur = db.cursor()
     cur.execute("""
         SELECT amount_off_cents, percent_off, type
         FROM promo_codes

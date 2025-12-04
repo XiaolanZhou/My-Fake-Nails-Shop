@@ -10,7 +10,7 @@ auth_bp = Blueprint("auth", __name__)
 @auth_bp.route("/register", methods=["POST"])
 def register():
     db = get_db_connection()
-    cursor = db.cursor(dictionary=True)
+    cursor = db.cursor()
     data = request.get_json()
     email    = data.get("email")
     username = data.get("username") or email  # allow email to serve as username
@@ -45,7 +45,7 @@ def register():
 @auth_bp.route("/login", methods=["POST"])
 def login():
     db = get_db_connection()
-    cursor = db.cursor(dictionary=True)
+    cursor = db.cursor()
     data = request.get_json()
     identifier = data.get("identifier")   # could be 'boss' or 'boss@mail.com'
     password   = data.get("password")
@@ -94,7 +94,7 @@ def login():
 @jwt_required()
 def me():
     db = get_db_connection()
-    cursor = db.cursor(dictionary=True)
+    cursor = db.cursor()
     user_id = int(get_jwt_identity())
     cursor.execute(
         "SELECT id, username, points FROM users WHERE id=%s", (user_id,)

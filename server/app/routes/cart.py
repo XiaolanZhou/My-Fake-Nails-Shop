@@ -11,7 +11,7 @@ def get_cart():
   user_id = get_jwt_identity()
 
   db = get_db_connection()
-  cursor = db.cursor(dictionary=True)
+  cursor = db.cursor()
   if user_id is None:
       cursor.execute("""
         SELECT ci.id AS cart_item_id, p.id AS product_id, p.name, p.description, p.price, p.image_url, ci.quantity
@@ -39,7 +39,7 @@ def add_to_cart():
     quantity   = data.get('quantity', 1)
 
     db = get_db_connection()
-    cursor = db.cursor(dictionary=True)
+    cursor = db.cursor()
 
     if user_id is None:
         cursor.execute(
@@ -78,7 +78,7 @@ def add_to_cart():
 @cart_bp.route('/remove/<int:item_id>', methods=['DELETE'])
 def remove_from_cart(item_id):
     db = get_db_connection()
-    cursor = db.cursor(dictionary=True)
+    cursor = db.cursor()
     cursor.execute("DELETE FROM cart_items WHERE id = %s", (item_id,))
     db.commit()
     cursor.close()
@@ -89,7 +89,7 @@ def remove_from_cart(item_id):
 @cart_bp.route('/increase/<int:item_id>', methods=['PATCH'])
 def increase_quantity(item_id):
     db = get_db_connection()
-    cursor = db.cursor(dictionary=True)
+    cursor = db.cursor()
     cursor.execute(
         "UPDATE cart_items SET quantity = quantity + 1 WHERE id = %s", (item_id,))
     db.commit()
@@ -101,7 +101,7 @@ def increase_quantity(item_id):
 @cart_bp.route('/decrease/<int:item_id>', methods=['PATCH'])
 def decrease_quantity(item_id):
     db = get_db_connection()
-    cursor = db.cursor(dictionary=True)
+    cursor = db.cursor()
     cursor.execute(
       "UPDATE cart_items SET quantity = greatest(quantity - 1, 0) WHERE id = %s",
       (item_id,)
@@ -118,7 +118,7 @@ def checkout():
     user_id = get_jwt_identity()  # None if no (or invalid) token
 
     db = get_db_connection()
-    cur = db.cursor(dictionary=True)
+    cur = db.cursor()
     cur.execute("""
         SELECT ci.*, p.price
         FROM cart_items ci

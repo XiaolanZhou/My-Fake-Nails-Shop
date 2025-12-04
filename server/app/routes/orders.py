@@ -13,7 +13,7 @@ orders_bp = Blueprint('orders', __name__)
 @jwt_required()
 def get_orders():
     db = get_db_connection()
-    cursor = db.cursor(dictionary=True)
+    cursor = db.cursor()
     user_id = get_jwt_identity()
     cursor.execute("""
       SELECT
@@ -71,7 +71,7 @@ def get_orders():
 @jwt_required()
 def get_order(order_id):
     db = get_db_connection()
-    cursor = db.cursor(dictionary=True)
+    cursor = db.cursor()
     user_id = get_jwt_identity()
     cursor.execute("""
       SELECT

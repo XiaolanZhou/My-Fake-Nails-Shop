@@ -39,7 +39,7 @@ def get_all_products():
         order_clause = "ORDER BY rating DESC"  # assumes rating column or view
 
     db = get_db_connection()
-    cursor = db.cursor(dictionary=True)
+    cursor = db.cursor()
 
     # Get total count
     cursor.execute(f"SELECT COUNT(*) AS cnt FROM products {where_clause}", params)
@@ -65,7 +65,7 @@ def get_all_products():
 @products_bp.route('/', methods=['POST'])
 def add_product():
     db = get_db_connection()
-    cursor = db.cursor(dictionary=True)
+    cursor = db.cursor()
     data = request.get_json()
     name = data['name']
     price = data['price']
@@ -84,7 +84,7 @@ def add_product():
 @products_bp.route('/<int:product_id>', methods=['GET'])
 def get_product(product_id):
     db = get_db_connection()
-    cursor = db.cursor(dictionary=True)
+    cursor = db.cursor()
     cursor.execute("SELECT * FROM products WHERE id = %s", (product_id,))
     product = cursor.fetchone()
     cursor.close()
