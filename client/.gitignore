@@ -12,7 +12,7 @@ node_modules
 dist
 dist-ssr
 *.local
-
+scripts/upload_to_blob.py
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
