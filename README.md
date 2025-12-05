@@ -1,4 +1,4 @@
-# My-Fake-Nails-Shop
+# Visit my shop website! https://meowoem.com/
 
 ## Local Development
 
